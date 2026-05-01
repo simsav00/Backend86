@@ -74,6 +74,27 @@ function categories_list(): array{
     );
 }
 
+function respond(int $type, int $status, mixed $data): void
+{
+    if($type === 1){
+
+        exit(json_encode([
+            "status" => $status,
+            "message"=> $data
+        ], 128));
+    }
+    elseif($type === 0){
+        
+        exit(json_encode([
+            "status" => $status,
+            "data"   => $data
+        ], 128));
+    }
+    else{
+        throw new \Exception("Invalid error type. Got: $type instead of either 0 or 1.");
+    }
+}
+
 function getCurrentPage(): string{
     return (string) GET("page", "feed");
 }
