@@ -1,0 +1,154 @@
+<?php
+
+declare(strict_types=1);
+
+define("APP_NAME",  "Auto86");
+define("APP_FNAME", "Auto");
+define("APP_LNAME", "86");
+define("APP_VERSION", "v1.0_N5-R3");
+define("APP_DESCRIPTION", APP_NAME . " is a LAMPStack-based social media for car enthusiasts to post and geek about cars.");
+define("APP_URL", "https://auto86.page.gd/Auto86/");
+
+define("BASE_URL", "Backend86");
+
+define("DB_CONN", "config/connect.php");
+
+define("DIR", __DIR__);
+define("AMP", "&");
+
+define("BOOTSTRAP", DIR . "/bootstrap.php");
+define("AUTH_CONTROLLER",    "controllers/AuthController.php");
+define("COMMENT_CONTROLLER", "controllers/CommentController.php");
+define("POST_CONTROLLER",    "controllers/PostController.php");
+define("USER_CONTROLLER",    "controllers/UserController.php");
+
+define("AUTH_MODEL",         "models/AuthModel.php");
+define("COMMENT_MODEL",      "models/CommentModel.php");
+define("POST_MODEL",         "models/PostModel.php");
+define("USER_MODEL",         "models/UserModel.php");
+
+define("DEFAULT_AVATAR_DIR", APP_ROOT(). "/" . BASE_URL . "/assets/default/avatar.webp");
+
+define("USER_AVATAR_DIR", APP_ROOT() . "/" . BASE_URL . "/uploads/users/avatar");
+
+function USER_AVATAR_URL_BASE(): string
+{
+    return "/" . BASE_URL . "/uploads/users/avatar";
+}
+
+function USER_AVATAR_URL(): string
+{
+    return USER_AVATAR_URL_BASE() . "/avatar_" . SESSION("username") . ".webp";
+}
+
+
+function USER_POST_ATTACHMENT_DIR(): string
+{
+    return APP_ROOT() . "/" . BASE_URL . "/uploads/users/post/" . SESSION("username");
+}
+
+function USER_POST_ATTACHMENT_URL_BASE(): string
+{
+    return "/" . BASE_URL . "/uploads/users/post/" . SESSION("username");
+}
+
+function categories(): array{
+    return array(
+        "General" => "General",
+        "JDM" => "JDM",
+        "EU" => "Europe",
+        "USDM" => "US Domestic Market",
+        "KDM" => "Korea Domestic Market",
+        "ADM" => "Aussie Domestic Market",
+        "UKDM" => "UK Domestic Market",
+        "IDM" => "Indonesia Domestic Market",
+        "DM" => "Domestic Market"
+    );
+}
+
+function categories_list(): array{
+    return array(
+        "Changelog" => "Changelog",
+        "All" => "All posts",
+        ...categories()
+    );
+}
+
+function getCurrentPage(): string{
+    return (string) GET("page", "feed");
+}
+
+function getCurrentCategory(): string{
+    return (string) GET("category", "All");
+}
+
+function getCurrentCategoryTitle(): string{
+    return (string) categories_list()[getCurrentCategory()];
+}
+
+function isAdmin(): bool{
+    return SESSION("username") === "simsav";
+}
+
+function APP_ROOT(): string{
+    return $_SERVER["DOCUMENT_ROOT"];
+}
+
+function SESSION($name): mixed{
+    return $_SESSION[$name] ?? "";
+}
+
+function FILES($name): array{
+    return $_FILES[$name] ?? "";
+}
+
+function POST($name, $default): mixed{
+    return $_POST[$name] ?? $default;
+}
+
+function GET($name, $default): mixed{
+    return $_GET[$name] ?? $default;
+}
+
+function server(string $key): bool{
+    return $_SERVER["REQUEST_METHOD"] === $key;
+}
+
+function isPost(): bool{
+    return server("POST");
+}
+ 
+function isGet(): bool{
+    return server("GET");
+}
+
+function isLoggedIn(): bool{
+    return isset($_SESSION["logged_in"]) && $_SESSION["logged_in"] === true;
+}
+
+function requireLogin(){
+    if(!isLoggedIn())
+    { redirect(URL_LOGIN_PAGE); die(); }
+}
+
+function isImage(string $filetype): bool
+{
+    return in_array($filetype, [
+        "jpg",  "webp", "png", "apng",  "gif",  "webp", "avif",
+        "heic", "heif", 
+        "tif",  "tiff", "bmp",  "ico",  "jxl",
+
+        "dng",  "cr2",  "cr3",  "nef",  "arw",  "raf",  "orf",
+    ]);
+}
+
+function isVideo(string $filetype): bool
+{
+    return in_array($filetype, 
+            ["mp4",  "mov",  "mkv",  "avi",  "webm",
+            "m4v",  "mpg",  "mpeg",
+            "3gp",  "3g2",
+            "ts",   "mts",  "m2ts",
+            "flv",  "f4v",  "ogv"]
+        );
+}
