@@ -27,6 +27,15 @@ define("COMMENT_MODEL",      "models/CommentModel.php");
 define("POST_MODEL",         "models/PostModel.php");
 define("USER_MODEL",         "models/UserModel.php");
 
+define("AUTH_SERVICE",         "services/AuthService.php");
+define("COMMENT_SERVICE",      "services/CommentService.php");
+define("POST_SERVICE",         "services/PostService.php");
+define("USER_SERVICE",         "services/UserService.php");
+
+
+
+define("HTTP_EXCEPTION",      "exceptions/HttpException.php");
+
 define("DEFAULT_AVATAR_DIR", APP_ROOT(). "/" . BASE_URL . "/assets/default/avatar.webp");
 
 define("USER_AVATAR_DIR", APP_ROOT() . "/" . BASE_URL . "/uploads/users/avatar");
@@ -76,6 +85,8 @@ function categories_list(): array{
 
 function respond(int $type, int $status, mixed $data): void
 {
+    http_response_code($status);
+
     if($type === 1){
 
         exit(json_encode([
@@ -84,7 +95,7 @@ function respond(int $type, int $status, mixed $data): void
         ], 128));
     }
     elseif($type === 0){
-        
+
         exit(json_encode([
             "status" => $status,
             "data"   => $data
@@ -95,16 +106,11 @@ function respond(int $type, int $status, mixed $data): void
     }
 }
 
-function getCurrentPage(): string{
-    return (string) GET("page", "feed");
-}
 
-function getCurrentCategory(): string{
-    return (string) GET("category", "All");
-}
 
-function getCurrentCategoryTitle(): string{
-    return (string) categories_list()[getCurrentCategory()];
+function getSessionCookie(){
+    
+    return $_COOKIE["session"];
 }
 
 function isAdmin(): bool{
@@ -115,19 +121,23 @@ function APP_ROOT(): string{
     return $_SERVER["DOCUMENT_ROOT"];
 }
 
-function SESSION($name): mixed{
+function COOKIE(string $name): mixed{
+    return $_COOKIE[$name];
+}
+
+function SESSION(string $name): mixed{
     return $_SESSION[$name] ?? "";
 }
 
-function FILES($name): array{
-    return $_FILES[$name] ?? "";
+function FILES(string $name, mixed $default = []): ?array{
+    return $_FILES[$name] ?? $default;
 }
 
-function POST($name, $default): mixed{
+function POST(string $name, mixed $default = ""): mixed{
     return $_POST[$name] ?? $default;
 }
 
-function GET($name, $default): mixed{
+function GET(string $name, mixed $default = ""): mixed{
     return $_GET[$name] ?? $default;
 }
 
@@ -147,9 +157,13 @@ function isLoggedIn(): bool{
     return isset($_SESSION["logged_in"]) && $_SESSION["logged_in"] === true;
 }
 
-function requireLogin(){
-    if(!isLoggedIn())
-    { redirect(URL_LOGIN_PAGE); die(); }
+function requirePost(): void{
+    if(!isPost())
+        respond(1, 405, "Method not allowed.");
+}
+
+function requireLogin(): void{
+    
 }
 
 function isImage(string $filetype): bool

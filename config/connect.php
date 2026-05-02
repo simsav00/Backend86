@@ -1,5 +1,4 @@
 <?php 
-
 declare(strict_types=1);
 
 class Database{
@@ -26,9 +25,6 @@ class Database{
                         PDO::ATTR_EMULATE_PREPARES => false
                     ]
                 );
-
-                echo "success";
-
             }
             catch(PDOException $e){
                 throw new \Exception($e->getMessage());
