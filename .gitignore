@@ -1,2 +1,29 @@
-uploads
+# 2026-05-06
+
+# dependencies
+node_modules/
+uploads/
+
+# build output
+dist/
+build/
+
+# environment variables
+.env
+.env.local
+.env.*.local
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# macOS
 .DS_Store
+
+# IDE/editor
+.vscode/
+.idea/
+
+# optional: coverage
+coverage/

@@ -71,15 +71,20 @@ class PostModel{
     public function getPostById(int $postId): ?array
     {
         
-        $stmt = $this->conn->prepare("SELECT p.*, u.username, u.avatar 
+        $stmt = $this->conn->prepare("SELECT p.*, u.username, u.avatar, COALESCE(c.total_comments, 0) total_comments
                                       FROM posts p
-                                      JOIN users u ON p.author_id = u.id
+                                      LEFT JOIN(
+                                        SELECT post_id, COUNT(*) total_comments
+                                        FROM posts_comments
+                                        GROUP BY post_id
+                                      ) c ON c.post_id = p.id
+                                      INNER JOIN users u ON p.author_id = u.id
                                       WHERE p.id = ?");
         $stmt->execute([ $postId ]);                        
         
         $post = $stmt->fetch();
 
-        return $post ? attachBaseUrl($post) : null;
+        return $post ? attachBaseUrl($post): null;
     }
 
     public function getPostCommentsById(int $postId): ?array

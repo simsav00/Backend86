@@ -28,6 +28,9 @@ if(!isset($_GET["t"]))
 $type = strtolower(trim($_GET["t"]));
 
 $routes = [
+    "categories_list" => fn() => respond(0, 200, categories_list()),
+    "categories" =>      fn() => respond(0, 200, categories()),
+
     "login" =>      fn() => $authController->login(),
     "register" =>   fn() => $authController->register(),
     "me" =>         fn() => $authController->me(),
