@@ -18,8 +18,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once "config/bootstrap.php";
 
-if($_SERVER["REQUEST_METHOD"] !== "POST")
-    respond(1, 405, "Method not allowed.");
+// if($_SERVER["REQUEST_METHOD"] !== "POST")
+//     respond(1, 405, "Method not allowed.");
 
 if(!isset($_GET["t"]))
     respond(1, 400, "Missing type of request.");
@@ -27,18 +27,21 @@ if(!isset($_GET["t"]))
 
 $type = strtolower(trim($_GET["t"]));
 
-$publicRoutes = [
-    "login" =>    fn() => $authController->login(),
-    "register" => fn() => $authController->register(),
-    "me" =>       fn() => $authController->me(),
-    "logout" =>   fn() => $authController->logout()
+$routes = [
+    "login" =>      fn() => $authController->login(),
+    "register" =>   fn() => $authController->register(),
+    "me" =>         fn() => $authController->me(),
+    "logout" =>     fn() => $authController->logout(),
+
+    "posts" =>      fn() => $postController->getAllPosts(),
+    "post" =>       fn() => $postController->getPost(),
+    "newpost" =>    fn() => $postController->newPost(),
+    "editpost" =>   fn() => $postController->editPost(),
+    "deletepost" => fn() => $postController->deletePost(),
 ];
 
-$protectedRoutes = [
-];
-
-if(array_key_exists($type, $publicRoutes)) {
-    $publicRoutes[$type]();
+if(array_key_exists($type, $routes)) {
+    $routes[$type]();
 }
 else{
     respond(0, 404, "Unknown page.");

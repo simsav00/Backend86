@@ -32,3 +32,15 @@ $conn = $db->connect();
 $authModel = new AuthModel($conn);
 $authService = new AuthService($authModel);
 $authController = new AuthController($authService);
+
+$postModel = new PostModel($conn);
+$postService = new PostService($postModel);
+$postController = new PostController($postService, $authService);
+
+// $commentModel = new CommentModel($conn);
+// $commentService = new CommentService($commentModel);
+// $commentController = new CommentController($commentService, $authService);
+
+// $userModel = new UserModel($conn);
+// $userService = new UserService($userModel);
+// $userController = new UserController($userService, $authService);

@@ -5,11 +5,15 @@ declare(strict_types=1);
 define("APP_NAME",  "Auto86");
 define("APP_FNAME", "Auto");
 define("APP_LNAME", "86");
-define("APP_VERSION", "v1.0_N5-R3");
-define("APP_DESCRIPTION", APP_NAME . " is a LAMPStack-based social media for car enthusiasts to post and geek about cars.");
-define("APP_URL", "https://auto86.page.gd/Auto86/");
+define("APP_VERSION", "1.0.0");
+define("APP_DESCRIPTION", "");
 
-define("BASE_URL", "Backend86");
+
+$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'];
+
+define("CURRENT_URL", (string) $baseUrl);
+define("BASE_URL", "Auto86");
 
 define("DB_CONN", "config/connect.php");
 
@@ -45,20 +49,20 @@ function USER_AVATAR_URL_BASE(): string
     return "/" . BASE_URL . "/uploads/users/avatar";
 }
 
-function USER_AVATAR_URL(): string
+function USER_AVATAR_URL(int $id): string
 {
-    return USER_AVATAR_URL_BASE() . "/avatar_" . SESSION("username") . ".webp";
+    return USER_AVATAR_URL_BASE() . "/avatar_" . $id . ".webp";
 }
 
 
-function USER_POST_ATTACHMENT_DIR(): string
+function USER_POST_ATTACHMENT_DIR(int $id): string
 {
-    return APP_ROOT() . "/" . BASE_URL . "/uploads/users/post/" . SESSION("username");
+    return APP_ROOT() . "/" . BASE_URL . "/uploads/users/post/" . $id;
 }
 
-function USER_POST_ATTACHMENT_URL_BASE(): string
+function USER_POST_ATTACHMENT_URL_BASE(int $id): string
 {
-    return "/" . BASE_URL . "/uploads/users/post/" . SESSION("username");
+    return "/" . BASE_URL . "/uploads/users/post/" . $id;
 }
 
 function categories(): array{
@@ -107,18 +111,15 @@ function respond(int $type, int $status, mixed $data): void
 }
 
 
-
-function getSessionCookie(){
-    
+function getSessionCookie(): ?string{
     return $_COOKIE["session"];
 }
 
-function isAdmin(): bool{
-    return SESSION("username") === "simsav";
+function isAdmin(): void{
 }
 
 function APP_ROOT(): string{
-    return $_SERVER["DOCUMENT_ROOT"];
+    return SERVER("DOCUMENT_ROOT");
 }
 
 function COOKIE(string $name): mixed{
@@ -133,24 +134,28 @@ function FILES(string $name, mixed $default = []): ?array{
     return $_FILES[$name] ?? $default;
 }
 
-function POST(string $name, mixed $default = ""): mixed{
+function POST(string $name, mixed $default = null): mixed{
     return $_POST[$name] ?? $default;
 }
 
-function GET(string $name, mixed $default = ""): mixed{
+function GET(string $name, mixed $default = null): mixed{
     return $_GET[$name] ?? $default;
 }
 
-function server(string $key): bool{
+function SERVER(string $key): mixed{
+    return $_SERVER[$key];
+}
+
+function REQUEST_METHOD(string $key): bool{
     return $_SERVER["REQUEST_METHOD"] === $key;
 }
 
 function isPost(): bool{
-    return server("POST");
+    return REQUEST_METHOD("POST");
 }
  
 function isGet(): bool{
-    return server("GET");
+    return REQUEST_METHOD("GET");
 }
 
 function isLoggedIn(): bool{
@@ -164,6 +169,28 @@ function requirePost(): void{
 
 function requireLogin(): void{
     
+}
+
+function attachBaseUrl(array $variable): ?array
+{
+    $isSingle = isset($variable["file_url"]) || isset($variable["avatar"]);
+
+    if ($isSingle) {
+        $variable = [$variable];
+    }
+
+    foreach ($variable as &$var) {
+        if (isset($var["file_url"]) && !empty($var["file_url"])) {
+            $var["file_url"] = CURRENT_URL . $var["file_url"];
+        }
+
+        if (isset($var["avatar"]) && !empty($var["avatar"])) {
+            $var["avatar"] = CURRENT_URL . $var["avatar"];
+        }
+    }
+    unset($var);
+
+    return $isSingle ? $variable[0] : $variable;
 }
 
 function isImage(string $filetype): bool

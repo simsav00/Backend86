@@ -44,6 +44,13 @@ class AuthService{
         $this->authModel->insertUserSession($user["id"], $session["hashedToken"], $session["expires"]);
     }
 
+    function isAdmin(): bool
+    {
+        $user = $this->getUserInfo();
+
+        return (bool) $user["role"] === "admin" ? true : false;
+    }
+
     function dropSession(): void
     {   
         $session = $this->getSessionFromCookie();

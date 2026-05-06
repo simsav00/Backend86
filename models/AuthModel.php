@@ -17,21 +17,23 @@ class AuthModel{
 
     public function getUserInfoBySessionToken( ?string $hashedToken ): ?array
     {
-        $stmt = $this->conn->prepare("SELECT u.id, u.username, u.bio, u.avatar 
+        $stmt = $this->conn->prepare("SELECT u.id, u.username, u.bio, u.avatar, u.role
                                       FROM `sessions` s 
                                       JOIN users u ON s.user_id = u.id 
                                       WHERE s.token = ? AND expires > UNIX_TIMESTAMP() 
                                       LIMIT 1");
         $stmt->execute([ $hashedToken ]);     
+
+        $user = $stmt->fetch();
         
-        return $stmt->fetch() ?: null;
+        return $user ? attachBaseUrl($user) : null;
     }
 
     public function insertUserSession(int $user_id, string $token, int $expires): void
     {
         $stmt = $this->conn->prepare("INSERT INTO `sessions` (user_id, token, expires)
                                       VALUES (?, ?, ?)");
-        $stmt->execute([ (int) $user_id, $token, $expires ])                                ;      
+        $stmt->execute([ (int) $user_id, $token, $expires ]);      
     }
 
     public function updateUserSession(string $oldToken, string $newToken, int $expires): void
@@ -53,7 +55,9 @@ class AuthModel{
         $stmt = $this->conn->prepare("SELECT * FROM users WHERE username = ? LIMIT 1");
         $stmt->execute([ $username ]);
 
-        return $stmt->fetch() ?: null;
+        $user = $stmt->fetch();
+
+        return $user ? attachBaseUrl($user) : null;
     }
 
     public function insertUser(string $username, 
