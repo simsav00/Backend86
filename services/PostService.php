@@ -6,7 +6,7 @@ use Exceptions\HttpException;
 class PostService{
 
     public function __construct(
-        private PostModel $postModel 
+        private PostModel $postModel
     ){}
 
     public function getPosts(int $offset, ?string $category = null): array
@@ -25,7 +25,7 @@ class PostService{
         return $posts;
     }
 
-    public function getPost( int $id, bool $withComments = true ): array
+    public function getPost( int $id ): array
     {
 
         $post = $this->postModel->getPostById($id);
@@ -33,23 +33,13 @@ class PostService{
         if(!$post)
             throw new HttpException(404, "Post not found.");
 
-        $comments = $this->postModel->getPostCommentsById($id);
-
-        if($withComments && $comments){
-            
-            $post = [
-                ...$post,
-                "comments" => $comments
-            ];
-        }
-
         return $post;
     }
 
-    public function validateNewPost( int $author_id, string $title, ?string $description, string $category, ?array $file,  ):void
+    public function validateNewPost( int $author_id, string $title, ?string $description, string $category, ?array $file  ):void
     {
         $title = trim($title);
-        $description = trim($description);
+        $description = $description ? trim($description) : null;
         $category = strtolower(trim($category));
 
         if($title === "")
@@ -58,9 +48,13 @@ class PostService{
         if(strlen($title) < 3 || strlen($title) > 192)
             throw new HttpException(400, "Title must be 3-192 in character length.");
 
-        if(strlen($description) > 16384)
+        if($description && strlen($description) > 16384)
             throw new HttpException(400, "Description cannot exceed 16384 characters.");
 
+        $newFilename = null;
+        $fileExt     = null;
+        $server_destination = null;
+        $browser_destination = null;
 
         if(!empty($file["name"])){
 
@@ -70,30 +64,79 @@ class PostService{
             $fileSize   = $file["size"];
             $fileError  = $file["error"];
 
-            $newFilename = sprintf(
-                "media_%s_%s_%s.%s",
-                (string) $author_id,
-                date("Ymd-His"),
-                bin2hex(random_bytes(8)),
-                $fileExt
-            );
+            $finfo      = new finfo(FILEINFO_MIME_TYPE);
+            $fileMime   = $finfo->file($fileTmp);
 
-            $destination = USER_POST_ATTACHMENT_DIR($author_id). "/" . $newFilename;
 
             if($fileError !== UPLOAD_ERR_OK)
-                throw new HttpException(500, "An error ocurred while uploading file.");
+                throw new HttpException(400, "An error ocurred while uploading file.");
 
-            if(!isImage($fileExt) && !isVideo($fileExt))
-                throw new HttpException(400, "Only image and video files can be uploaded.");
+            if(
+               !isImage($fileExt) && !isVideo($fileExt) ||
+               isImage($fileExt) && !isImageMime($fileMime) ||
+               isVideo($fileExt) && !isVideoMime($fileMime)
+            ){
+                throw new HttpException(400, "Only image and video are allowed for uploads.");
+            }
 
             if($fileSize > 20 * 1048576)
                 throw new HttpException(413, "File too large, max file size is 20MB.");
 
-            if(!is_dir($destination)) 
-                mkdir($destination);
 
-            if(!move_uploaded_file($fileTmp, $destination))
-                throw new HttpException(500, "Failed to move uploaded file.");
+            $newFilename = sprintf(
+                "media_%s_%s_%s.",
+                (string) $author_id,
+                date("Ymd-His"),
+                bin2hex(random_bytes(8))
+            );
+            
+            $target_destination = USER_POST_ATTACHMENT_DIR($author_id);
+
+            $server_destination = $target_destination . "/" . $newFilename;
+            $browser_destination = USER_POST_ATTACHMENT_URL_BASE($author_id) . "/" . $newFilename;
+
+            if(!is_dir($target_destination)) 
+                mkdir($target_destination, 0777, true);
+
+
+            if(!empty($file["name"]) && isImageMime($fileMime)){
+
+                $gd_file = getimagesize($fileTmp);
+
+                if(!$gd_file)
+                    throw new HttpException(400, "Invalid image.");
+                
+                $img = null;
+
+                match($gd_file[2]){
+
+                    IMAGETYPE_JPEG => $img = imagecreatefromjpeg($fileTmp),
+                    IMAGETYPE_PNG  => $img = imagecreatefrompng($fileTmp),
+                    IMAGETYPE_GIF  => $img = imagecreatefromgif($fileTmp),
+                    IMAGETYPE_WEBP => $img = imagecreatefromwebp($fileTmp),
+
+                    IMAGETYPE_AVIF => function_exists("imagecreatefromavif") 
+                                      ? $img = imagecreatefromavif($fileTmp) 
+                                      : throw new HttpException(500, "Unsupported image file extension."),
+
+                    default => throw new HttpException(500, "Unsupported image mime.")
+                };
+
+                imagepalettetotruecolor($img);
+                imagealphablending($img, false);
+                imagesavealpha($img, true);
+
+                if(!imagewebp($img, $server_destination . ".webp", 76))
+                    throw new HttpException(500, "Unable to save uploaded image.");
+
+                imagedestroy($img);
+                
+            }
+            elseif(isVideoMime($fileMime)){
+
+                if(!move_uploaded_file($fileTmp, $server_destination . ".$fileExt"))
+                    throw new HttpException(500, "Failed to move uploaded file.");
+            }
 
         }
 
@@ -102,9 +145,9 @@ class PostService{
             $category, 
             $title, 
             $description, 
-            $newFilename ?? null, 
-            $fileExt ?? null, 
-            (($description ?? null) !== null) ? $destination : null
+            $newFilename, 
+            $fileExt, 
+            $browser_destination
         );
     }
 

@@ -87,22 +87,6 @@ class PostModel{
         return $post ? attachBaseUrl($post): null;
     }
 
-    public function getPostCommentsById(int $postId): ?array
-    {
-        $stmt = $this->conn->prepare("SELECT c.*, u.username, u.avatar
-                                      FROM posts_comments c
-                                      JOIN users u ON c.author_id = u.id
-                                      WHERE c.post_id = ?
-                                      ORDER BY c.post_date DESC, c.id DESC
-                                      ");
-        
-        $stmt->execute([ $postId ]);
-
-        $comments = $stmt->fetchAll();
-        
-        return $comments ? attachBaseUrl($comments) : null;
-    }
-
     public function updatePost(int $author_id,
                                int $post_id, 
                                string $category, 

@@ -48,7 +48,7 @@ class AuthService{
     {
         $user = $this->getUserInfo();
 
-        return (bool) $user["role"] === "admin" ? true : false;
+        return (bool) $user["role"] === "admin";
     }
 
     function dropSession(): void
@@ -83,6 +83,7 @@ class AuthService{
             throw new HttpException(401, "Invalid or expired session.");
 
         if($session["expires"] - time() < (86400 * 2)) {
+            
             $newSession = self::newSessionCookie();
 
             $this->authModel->updateUserSession(

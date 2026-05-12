@@ -8,7 +8,6 @@ define("APP_LNAME", "86");
 define("APP_VERSION", "1.0.0");
 define("APP_DESCRIPTION", "");
 
-
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'];
 
@@ -49,11 +48,11 @@ function USER_AVATAR_URL_BASE(): string
     return "/" . BASE_URL . "/uploads/users/avatar";
 }
 
-function USER_AVATAR_URL(int $id): string
+function USER_AVATAR_DIR(): string
 {
-    return USER_AVATAR_URL_BASE() . "/avatar_" . $id . ".webp";
+    return APP_ROOT() . USER_AVATAR_URL_BASE();
+    # return USER_AVATAR_URL_BASE() . "/avatar_" . $id . ".webp";
 }
-
 
 function USER_POST_ATTACHMENT_DIR(int $id): string
 {
@@ -213,4 +212,55 @@ function isVideo(string $filetype): bool
             "ts",   "mts",  "m2ts",
             "flv",  "f4v",  "ogv"]
         );
+}
+
+function isImageMime(string $mime): bool
+{
+    return in_array($mime, [
+        "image/jpeg",
+        "image/webp",
+        "image/png",
+        "image/apng",
+        "image/gif",
+        "image/avif",
+        "image/heic",
+        "image/heif",
+        "image/tiff",
+        "image/bmp",
+        "image/x-icon",
+        "image/vnd.microsoft.icon",
+        "image/jxl",
+
+        // RAW formats
+        "image/x-adobe-dng",
+        "image/x-canon-cr2",
+        "image/x-canon-cr3",
+        "image/x-nikon-nef",
+        "image/x-sony-arw",
+        "image/x-fuji-raf",
+        "image/x-olympus-orf",
+    ]);
+}
+
+function isVideoMime(string $mime): bool
+{
+    return in_array($mime, [
+        "video/mp4",
+        "video/quicktime",     // mov
+        "video/x-matroska",    // mkv
+        "video/x-msvideo",     // avi
+        "video/webm",
+
+        "video/x-m4v",         // m4v
+        "video/mpeg",
+
+        "video/3gpp",          // 3gp
+        "video/3gpp2",         // 3g2
+
+        "video/mp2t",          // ts
+        "video/MP2T",          // ts
+        "video/avi",           // uncommon alt
+        "video/x-flv",         // flv
+        "video/ogg",           // ogv
+    ]);
 }

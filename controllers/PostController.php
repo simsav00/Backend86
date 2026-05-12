@@ -91,7 +91,7 @@ class PostController{
                 POST("description")
             );
 
-            respond(0, 200, "Post editied.");
+            respond(0, 200, "Post editied successfully.");
         }
         catch(HttpException $e){
             respond(1, $e->getStatusCode(), $e->getMessage());
