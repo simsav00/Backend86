@@ -73,7 +73,6 @@ class UserService{
         }
 
         imagedestroy($img);
-
     }
 
     public function validateBio( int $user_id, ?string $bio ): void

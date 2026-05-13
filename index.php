@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-phpinfo();
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
@@ -29,23 +28,26 @@ if(!isset($_GET["t"]))
 $type = strtolower(trim($_GET["t"]));
 
 $routes = [
-    "categories_list" => fn() => respond(0, 200, categories_list()),
-    "categories" =>      fn() => respond(0, 200, categories()),
+    "categories_list" =>    fn() => respond(0, 200, categories_list()),
+    "categories" =>         fn() => respond(0, 200, categories()),
 
-    "login" =>      fn() => $authController->login(),
-    "register" =>   fn() => $authController->register(),
-    "me" =>         fn() => $authController->me(),
-    "logout" =>     fn() => $authController->logout(),
+    "login" =>              fn() => $authController->login(),
+    "register" =>           fn() => $authController->register(),
+    "me" =>                 fn() => $authController->me(),
+    "logout" =>             fn() => $authController->logout(),
 
-    "posts" =>      fn() => $postController->getAllPosts(),
-    "post" =>       fn() => $postController->getPost(),
-    "newpost" =>    fn() => $postController->newPost(),
-    "editpost" =>   fn() => $postController->editPost(),
-    "deletepost" => fn() => $postController->deletePost(),
+    "posts" =>              fn() => $postController->getAllPosts(),
+    "post" =>               fn() => $postController->getPost(),
+    "newpost" =>            fn() => $postController->newPost(),
+    "editpost" =>           fn() => $postController->editPost(),
+    "deletepost" =>         fn() => $postController->deletePost(),
 
-    ""
+    "newcomment" =>         fn() => $commentController->newComment(),
+    "deletecomment" =>      fn() => $commentController->deleteComment(),
+    "comments"  =>          fn() => $commentController->getComments(),
 
-    // "user" =>       fn() => $userController->getUser()
+    "changebio" =>          fn() => $userController->newBio(),
+    "changeavatar" =>       fn() => $userController->newAvatar()
 ];
 
 if(array_key_exists($type, $routes)) {
