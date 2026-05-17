@@ -9,23 +9,21 @@ class PostService{
         private PostModel $postModel
     ){}
 
-    public function getPosts(int $offset, ?string $category = null): array
+    public function getPosts(int $offset, int $limit, ?string $category = null): ?array
     {
 
         if(!$category || strtolower(trim($category)) === "all"){
-            $posts = $this->postModel->getPosts(20, $offset);
+            $posts = $this->postModel->getPosts($limit, $offset);
         }
         else{
-            $posts = $this->postModel->getPostsByCategory($category, 20, $offset);
+            $posts = $this->postModel->getPostsByCategory($category, $limit, $offset);
 
-            if(!$posts)
-                throw new HttpException(404, "No matching posts.");
         }
 
         return $posts;
     }
 
-    public function getPost( int $id ): array
+    public function getPost( int $id ): ?array
     {
 
         $post = $this->postModel->getPostById($id);
@@ -36,7 +34,7 @@ class PostService{
         return $post;
     }
 
-    public function validateNewPost( int $author_id, string $title, ?string $description, string $category, ?array $file  ):void
+    public function validateNewPost( int $author_id, string $title, ?string $description, string $category, ?array $file  ): void
     {
         $title = trim($title);
         $description = $description ? trim($description) : null;
@@ -134,7 +132,7 @@ class PostService{
             }
             elseif(isVideoMime($fileMime)){
 
-                if(!move_uploaded_file($fileTmp, $server_destination . ".$fileExt"))
+                if(!move_uploaded_file($fileTmp, $server_destination . $fileExt))
                     throw new HttpException(500, "Failed to move uploaded file.");
             }
 
@@ -187,8 +185,10 @@ class PostService{
 
         $file_url = APP_ROOT() . "/" . $post["file_url"];
 
-        if(!empty($file_url) && file_exists($file_url))
+        if(!empty($file_url) && file_exists($file_url)){ 
+            
             unlink($file_url);
+        }
 
         $this->postModel->deletePost($issuer_id, $post_id);
     }

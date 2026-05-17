@@ -13,39 +13,45 @@ class PostController{
     public function getAllPosts(): void
     {
         try{
+
+            if(GET("offset") === null || GET("limit") === null)
+            {
+                throw new HttpException(400, "Parameters does not satisfy.");
+            }
             
-            $offset = GET("offset");
+            $offset   = (int)GET("offset");
+            $limit    = (int)GET("limit");
+            $category = GET("category");
 
             if($offset === null || filter_var($offset, FILTER_VALIDATE_INT) === false)
                 throw new HttpException(400, "Missing offset parameter or invalid number.");
 
-            $posts = $this->postService->getPosts( 
-                (int) GET("offset"), 
-                GET("category") 
-            );
+            if($limit === null || filter_var($limit, FILTER_VALIDATE_INT) === false)
+                throw new HttpException(400, "Missing limit parameter or invalid number.");
 
-            respond(0, 200, $posts);
+            $posts = $this->postService->getPosts($offset, $limit, $category);
+
+            respond(200, $posts);
         }
         catch(HttpException $e){    
             
-            respond(1, $e->getStatusCode(), $e->getMessage());
+            respond($e->getStatusCode(), $e->getMessage());
         }
     }
 
-    public function getPost(): void
+    public function getPost(int $post_id): void
     {
         try{
-            $postId = GET("id");
 
-            if($postId === null || filter_var($postId, FILTER_VALIDATE_INT) === false)
+            if($post_id === null || filter_var($post_id, FILTER_VALIDATE_INT) === false)
                 throw new HttpException(400, "Missing post id.");
 
-            $post = $this->postService->getPost( (int) $postId );
+            $post = $this->postService->getPost($post_id);
 
-            respond(0, 200, $post);
+            respond(200, $post);
         }
         catch(HttpException $e){    
-            respond(1, $e->getStatusCode(), $e->getMessage());
+            respond($e->getStatusCode(), $e->getMessage());
         }
     }
 
@@ -56,7 +62,7 @@ class PostController{
 
             if( strtolower(trim(POST("category"))) === "changelog" && !$this->authService->isAdmin() )
             {
-                throw new HttpException(401 ,"Invalid permission.");
+                throw new HttpException(401 , "Forbidden operation.");
             }
                 
             $this->postService->validateNewPost(
@@ -68,11 +74,11 @@ class PostController{
             );
         }
         catch(HttpException $e){    
-            respond(1, $e->getStatusCode(), $e->getMessage());
+            respond($e->getStatusCode(), $e->getMessage());
         }
     }
 
-    public function editPost(): void
+    public function editPost(int $post_id): void
     {
         try{
 
@@ -80,8 +86,6 @@ class PostController{
 
             if(POST("post_id") === null)
                 throw new HttpException(400, "Post id is not specified");
-
-            $post_id = (int) POST("post_id");
 
             $this->postService->validateEditPost(
                 $issuer["id"], 
@@ -91,29 +95,27 @@ class PostController{
                 POST("description")
             );
 
-            respond(0, 200, "Post editied successfully.");
+            respond(200, "Post editied successfully.");
         }
         catch(HttpException $e){
-            respond(1, $e->getStatusCode(), $e->getMessage());
+            respond($e->getStatusCode(), $e->getMessage());
         }
     }
 
-    public function deletePost(): void
+    public function deletePost(int $post_id): void
     {
         try{
             $issuer = $this->authService->getUserInfo();
-
-            $post_id = (int) POST("post_id");
 
             $this->postService->validateDeletePost(
                 $issuer["id"],
                 $post_id
             );
 
-            respond(0, 200 ,"Post successfully deleted.");
+            respond(200 ,"Post successfully deleted.");
         }
         catch(HttpException $e){
-            respond(1, $e->getStatusCode(), $e->getMessage());
+            respond($e->getStatusCode(), $e->getMessage());
         }
     }
 }

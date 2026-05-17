@@ -86,26 +86,28 @@ function categories_list(): array{
     );
 }
 
-function respond(int $type, int $status, mixed $data): void
+function respond(int $status, mixed $data): void
 {
+    if($status > 599 || $status < 100){
+        http_response_code(500);
+        throw new \Exception("Invalid status code.");
+    }
+
     http_response_code($status);
 
-    if($type === 1){
+    if($status > 399){
 
         exit(json_encode([
             "status" => $status,
             "message"=> $data
         ], 128));
     }
-    elseif($type === 0){
+    else{
 
         exit(json_encode([
             "status" => $status,
             "data"   => $data
         ], 128));
-    }
-    else{
-        throw new \Exception("Invalid error type. Got: $type instead of either 0 or 1.");
     }
 }
 
@@ -159,11 +161,6 @@ function isGet(): bool{
 
 function isLoggedIn(): bool{
     return isset($_SESSION["logged_in"]) && $_SESSION["logged_in"] === true;
-}
-
-function requirePost(): void{
-    if(!isPost())
-        respond(1, 405, "Method not allowed.");
 }
 
 function requireLogin(): void{

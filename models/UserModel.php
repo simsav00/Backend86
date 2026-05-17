@@ -9,7 +9,7 @@ class UserModel{
 
     public function getUserById( int $user_id ): ?array
     {
-        $stmt = $this->conn->prepare("SELECT * FROM users WHERE id = ?");
+        $stmt = $this->conn->prepare("SELECT id, username, role, bio, avatar, reg_date FROM users WHERE id = ?");
         $stmt->execute([ $user_id ]);
 
         $user = $stmt->fetch();

@@ -9,6 +9,11 @@ class UserService{
         private UserModel $userModel
     ){}
 
+    public function validateGetUser(int $user_id): ?array
+    {
+        return $this->userModel->getUserById($user_id);
+    }
+
     public function validateAvatar(int $user_id, array $avatar): void
     {
         if(!$user_id)

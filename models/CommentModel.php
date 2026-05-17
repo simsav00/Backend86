@@ -7,18 +7,19 @@ class CommentModel{
         private PDO $conn
     ){}    
 
-    public function getCommentsByPostId(int $post_id, int $offset): ?array
+    public function getCommentsByPostId(int $post_id, int $limit, int $offset): ?array
     {
         $stmt = $this->conn->prepare("SELECT c.*, u.username, u.avatar
                                       FROM posts_comments c
                                       JOIN users u ON c.author_id = u.id
                                       WHERE c.post_id = ?
                                       ORDER BY c.post_date DESC, c.id DESC
-                                      LIMIT 20 OFFSET ?
+                                      LIMIT ? OFFSET ?
                                       ");
 
         $stmt->bindValue(1, $post_id, PDO::PARAM_INT);
-        $stmt->bindValue(2, $offset, PDO::PARAM_INT);
+        $stmt->bindValue(2, $limit, PDO::PARAM_INT);
+        $stmt->bindValue(3, $offset, PDO::PARAM_INT);
         $stmt->execute();
 
         $comments = $stmt->fetchAll();

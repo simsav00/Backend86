@@ -14,10 +14,10 @@ class AuthController{
         try{
             $user = $this->authService->getUserInfo();
 
-            respond(0, 200, $user);
+            respond(200, $user);
         }
         catch(HttpException $e){
-            respond(1, $e->getStatusCode(), $e->getMessage());
+            respond($e->getStatusCode(), $e->getMessage());
         }
 
     }
@@ -27,10 +27,10 @@ class AuthController{
         try{
             $this->authService->dropSession();
 
-            respond(0, 200, "User is loggout.");
+            respond(200, "User is loggout.");
         }
         catch(HttpException $e){
-            respond(1, $e->getStatusCode(), $e->getMessage());
+            respond($e->getStatusCode(), $e->getMessage());
         }
     }
 
@@ -41,10 +41,10 @@ class AuthController{
                 POST("username"), POST("password")
             );
 
-            respond(0, 201, "User created!");
+            respond(201, "User created!");
         }
         catch(HttpException $e){
-            respond(1, $e->getStatusCode(), $e->getMessage());  
+            respond($e->getStatusCode(), $e->getMessage());  
         }
     }
 
@@ -56,11 +56,11 @@ class AuthController{
                 POST("username"), POST("password")
             );
 
-            respond(0, 200, "User logged in!");
+            respond(200, "User logged in!");
         }   
         catch(HttpException $e){
             
-            respond(1, $e->getStatusCode(), $e->getMessage());
+            respond($e->getStatusCode(), $e->getMessage());
         }
     }
 }

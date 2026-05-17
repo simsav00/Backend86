@@ -17,42 +17,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once "config/bootstrap.php";
-
-// if($_SERVER["REQUEST_METHOD"] !== "POST")
-//     respond(1, 405, "Method not allowed.");
-
-if(!isset($_GET["t"]))
-    respond(1, 400, "Missing type of request.");
+require_once "router.php";
+// if(!isset($_GET["t"]))
+//     respond(400, "Missing type of request.");
     
 
-$type = strtolower(trim($_GET["t"]));
+// $type = strtolower(trim($_GET["t"]));
 
-$routes = [
-    "categories_list" =>    fn() => respond(0, 200, categories_list()),
-    "categories" =>         fn() => respond(0, 200, categories()),
+// $routes = [
+//     "categories_list" =>    fn() => respond(200, categories_list()),
+//     "categories" =>         fn() => respond(200, categories()),
 
-    "login" =>              fn() => $authController->login(),
-    "register" =>           fn() => $authController->register(),
-    "me" =>                 fn() => $authController->me(),
-    "logout" =>             fn() => $authController->logout(),
+//     "login" =>              fn() => $authController->login(),
+//     "register" =>           fn() => $authController->register(),
+//     "me" =>                 fn() => $authController->me(),
+//     "logout" =>             fn() => $authController->logout(),
 
-    "posts" =>              fn() => $postController->getAllPosts(),
-    "post" =>               fn() => $postController->getPost(),
-    "newpost" =>            fn() => $postController->newPost(),
-    "editpost" =>           fn() => $postController->editPost(),
-    "deletepost" =>         fn() => $postController->deletePost(),
+//     "posts" =>              fn() => $postController->getAllPosts(),
+//     "post" =>               fn() => $postController->getPost(),
+//     "newpost" =>            fn() => $postController->newPost(),
+//     "editpost" =>           fn() => $postController->editPost(),
+//     "deletepost" =>         fn() => $postController->deletePost(),
 
-    "newcomment" =>         fn() => $commentController->newComment(),
-    "deletecomment" =>      fn() => $commentController->deleteComment(),
-    "comments"  =>          fn() => $commentController->getComments(),
+//     "newcomment" =>         fn() => $commentController->newComment(),
+//     "deletecomment" =>      fn() => $commentController->deleteComment(),
+//     "comments"  =>          fn() => $commentController->getComments(),
 
-    "changebio" =>          fn() => $userController->newBio(),
-    "changeavatar" =>       fn() => $userController->newAvatar()
-];
+//     "changebio" =>          fn() => $userController->newBio(),
+//     "changeavatar" =>       fn() => $userController->newAvatar()
+// ];
 
-if(array_key_exists($type, $routes)) {
-    $routes[$type]();
-}
-else{
-    respond(0, 404, "Unknown page.");
-}
+// if(array_key_exists($type, $routes)) {
+//     $routes[$type]();
+// }
+// else{
+//     respond(404, "Unknown page.");
+// }
+

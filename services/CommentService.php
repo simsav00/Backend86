@@ -9,11 +9,11 @@ class CommentService{
         private CommentModel $commentModel
     ){}
 
-    public function getPostComments(int $post_id, int $offset): ?array
+    public function getPostComments(int $post_id, int $limit, int $offset): ?array
     {
-        $comments = $this->commentModel->getCommentsByPostId($post_id, $offset);
+        $comments = $this->commentModel->getCommentsByPostId($post_id, $limit, $offset);
     
-        return $comments ? attachBaseUrl($comments)     : null;
+        return $comments;
     }
 
     public function validateComment(int $issuer_id, int $post_id, string $comment): void

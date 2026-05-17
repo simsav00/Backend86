@@ -7,6 +7,7 @@ header("Pragma: no-cache");
 header("Expires: 0");
 
 require_once "config/functions.php";
+require_once "libraries/envLoader.php";
 
 require_once HTTP_EXCEPTION;
 require_once DB_CONN;
@@ -26,7 +27,9 @@ require_once COMMENT_CONTROLLER;
 require_once POST_CONTROLLER;
 require_once USER_CONTROLLER;
 
-$db = new Database("localhost", "phpautogallery", "root", "12345678");
+loadEnv(".env");
+
+$db = new Database($_ENV["DB_HOST"], $_ENV["DB_NAME"], $_ENV["DB_USER"], $_ENV["DB_PASS"]);
 $conn = $db->connect();
 
 $authModel = new AuthModel($conn);

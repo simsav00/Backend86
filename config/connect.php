@@ -10,7 +10,7 @@ class Database{
         private string $db_password,
 
         protected ?PDO $conn = null
-    ){    }
+    ){}
 
     public function connect(): PDO{
 

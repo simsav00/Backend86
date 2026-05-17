@@ -10,6 +10,16 @@ class UserController{
         private AuthService $authService
     ){}
 
+    public function getUser(int $user_id): void{
+        
+        try{
+            respond(200, $this->userService->validateGetUser($user_id));
+        }
+        catch(\Throwable $e){
+            respond(400, $e->getMessage());
+        }
+    }
+
     public function newAvatar(): void
     {
         try{
@@ -22,10 +32,10 @@ class UserController{
                 $issuer["id"], FILES("avatar")
             );
 
-            respond(0, 200, "Avatar changed successfully.");
+            respond(200, "Avatar changed successfully.");
         }
         catch(HttpException $e){
-            respond(1, $e->getStatusCode(), $e->getMessage());
+            respond($e->getStatusCode(), $e->getMessage());
         }
     }
 
@@ -38,10 +48,10 @@ class UserController{
                 $issuer["id"], POST("bio")
             );
 
-            respond(0, 200,"Bio changed successfully.");
+            respond(200,"Bio changed successfully.");
         }
         catch(HttpException $e){
-            respond(1, $e->getStatusCode(), $e->getMessage());
+            respond($e->getStatusCode(), $e->getMessage());
         }
     }
 }
