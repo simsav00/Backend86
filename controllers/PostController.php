@@ -14,22 +14,13 @@ class PostController{
     {
         try{
 
-            if(GET("offset") === null || GET("limit") === null)
-            {
-                throw new HttpException(400, "Parameters does not satisfy.");
-            }
+            $issuer = $this->authService->getUserInfo();
+
+            $params = self::validateParameters();
             
-            $offset   = (int)GET("offset");
-            $limit    = (int)GET("limit");
             $category = GET("category");
 
-            if($offset === null || filter_var($offset, FILTER_VALIDATE_INT) === false)
-                throw new HttpException(400, "Missing offset parameter or invalid number.");
-
-            if($limit === null || filter_var($limit, FILTER_VALIDATE_INT) === false)
-                throw new HttpException(400, "Missing limit parameter or invalid number.");
-
-            $posts = $this->postService->getPosts($offset, $limit, $category);
+            $posts = $this->postService->getPosts($params["offset"], $params["limit"], $category, $issuer["id"]);
 
             respond(200, $posts);
         }
@@ -39,14 +30,34 @@ class PostController{
         }
     }
 
+    public function getPostsByUserId(int $user_id): void
+    {
+        try{
+
+            if(!$user_id || !is_int($user_id))
+                throw new HttpException(400, "Invalid user_id");
+
+            $params = self::validateParameters();
+
+            respond(200, $this->postService->getPostsByUserId($params["offset"],$params["limit"], $user_id));   
+        }
+        catch(HttpException $e){    
+            respond($e->getStatusCode(), $e->getMessage());
+        }
+
+
+    }
+
     public function getPost(int $post_id): void
     {
         try{
 
+            $issuer = $this->authService->getUserInfo();
+
             if($post_id === null || filter_var($post_id, FILTER_VALIDATE_INT) === false)
                 throw new HttpException(400, "Missing post id.");
 
-            $post = $this->postService->getPost($post_id);
+            $post = $this->postService->getPost($post_id, $issuer["id"]);
 
             respond(200, $post);
         }
@@ -60,20 +71,48 @@ class PostController{
         try{
             $issuer = $this->authService->getUserInfo();
 
-            if( strtolower(trim(POST("category"))) === "changelog" && !$this->authService->isAdmin() )
+            $category = strtolower(trim(POST("category")));
+            # $categories = array_change_key_case(categories(), CASE_LOWER);
+
+            if( $category === "changelog" && $issuer["role"] !== "admin" )
             {
-                throw new HttpException(401 , "Forbidden operation.");
+                throw new HttpException(403 , "Forbidden operation.");
             }
+
+            /*if(!array_key_exists($category, $categories))
+            {
+                throw new HttpException(400, "Category does not exist.");
+            }*/
                 
             $this->postService->validateNewPost(
                 $issuer["id"],
                 POST("title"),
                 POST("description"),
                 POST("category"),
-                FILES("attachment")
+                FILES("file")
             );
+
+            respond(201, "Post created successfully.");
         }
         catch(HttpException $e){    
+            respond($e->getStatusCode(), $e->getMessage());
+        }
+    }
+
+    public function likePost(int $post_id): void
+    {
+        try{
+            $issuer = $this->authService->getUserInfo();
+
+            $res = $this->postService->validateLikePost($issuer["id"], $post_id);
+
+            if(!$res)
+                respond(200, "Post liked successfully.");
+
+            else
+                respond(204, "Post like removed successfully.");
+        }
+        catch(HttpException $e){
             respond($e->getStatusCode(), $e->getMessage());
         }
     }
@@ -82,17 +121,20 @@ class PostController{
     {
         try{
 
-            $issuer = $this->authService->getUserInfo();
+            $issuer = $this?->authService->getUserInfo();
 
-            if(POST("post_id") === null)
-                throw new HttpException(400, "Post id is not specified");
+            $post = getBody();
+
+            if(!isset($post["title"]) || !isset($post["category"])){
+                throw new HttpException(400, "Missing title or category.");
+            }
 
             $this->postService->validateEditPost(
                 $issuer["id"], 
                 $post_id,
-                POST("category"),
-                POST("title"),
-                POST("description")
+                $post["category"],
+                $post["title"],
+                $post["description"] ?? ""
             );
 
             respond(200, "Post editied successfully.");
@@ -108,7 +150,7 @@ class PostController{
             $issuer = $this->authService->getUserInfo();
 
             $this->postService->validateDeletePost(
-                $issuer["id"],
+                $issuer,
                 $post_id
             );
 
@@ -117,5 +159,24 @@ class PostController{
         catch(HttpException $e){
             respond($e->getStatusCode(), $e->getMessage());
         }
+    }
+
+    private static function validateParameters(): array{
+
+        if(GET("offset") === null || GET("limit") === null)
+        {
+            throw new HttpException(400, "Parameters does not satisfy.");
+        }
+
+        if(filter_var(GET("offset"), FILTER_VALIDATE_INT) === false || (int)GET("offset") < 0)
+            throw new HttpException(400, "Missing offset parameter or invalid number.");
+
+        if(filter_var(GET("limit"), FILTER_VALIDATE_INT) === false || (int)GET("limit") <= 0)
+            throw new HttpException(400, "Missing limit parameter or invalid number.");
+
+        return [
+            "offset" => (int)GET("offset"),
+            "limit"  => (int)GET("limit")
+        ];
     }
 }

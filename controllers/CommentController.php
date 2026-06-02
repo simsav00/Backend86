@@ -14,8 +14,8 @@ class CommentController{
     {   
         try{
 
-            $offset  = (int)GET("offset");
-            $limit   = (int)GET("limit");
+            $offset  = GET("offset");
+            $limit   = GET("limit");
 
             if(!$post_id || filter_var($post_id, FILTER_VALIDATE_INT) === false)
             {
@@ -27,7 +27,12 @@ class CommentController{
                 throw new HttpException(400, "Invalid or missing offset.");
             }
 
-            $comments = $this->commentService->getPostComments($post_id, $limit, $offset);
+            if($limit === null || filter_var($limit, FILTER_VALIDATE_INT) === false)
+            {
+                throw new HttpException(400, "Invalid or missing limit.");
+            }
+
+            $comments = $this->commentService->getPostComments($post_id, (int)$limit, (int)$offset);
 
             respond(200, $comments);
         }
@@ -62,10 +67,9 @@ class CommentController{
         try{
 
             $issuer = $this->authService->getUserInfo();
-            $comment_id = POST("comment_id");
 
             $this->commentService->validateDeleteComment(
-               $issuer["id"], $comment_id
+               $issuer, $comment_id
             );
 
             respond(200, "Comment deleted successfully.");

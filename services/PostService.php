@@ -9,7 +9,7 @@ class PostService{
         private PostModel $postModel
     ){}
 
-    public function getPosts(int $offset, int $limit, ?string $category = null): ?array
+    public function getPosts(int $offset, int $limit, ?string $category = null, ?int $issuer_id = null): ?array
     {
 
         if(!$category || strtolower(trim($category)) === "all"){
@@ -17,13 +17,19 @@ class PostService{
         }
         else{
             $posts = $this->postModel->getPostsByCategory($category, $limit, $offset);
+        }
 
+        if($issuer_id && $posts){
+            foreach($posts as &$post){
+                $post["liked"] = (bool)$this->postModel->getLike($issuer_id, $post["id"]);
+            }
+            unset($post);
         }
 
         return $posts;
     }
 
-    public function getPost( int $id ): ?array
+    public function getPost( int $id, ?int $issuer_id = null ): ?array
     {
 
         $post = $this->postModel->getPostById($id);
@@ -31,23 +37,50 @@ class PostService{
         if(!$post)
             throw new HttpException(404, "Post not found.");
 
+        if($issuer_id){
+
+            $post = [
+                ...$post,
+                "liked" => (bool)$this->postModel->getLike($issuer_id, $post["id"])
+            ];
+        }
+
         return $post;
+    }
+
+    public function getPostsByUserId(int $offset, int $limit, int $user_id): ?array
+    {
+        return $this->postModel->getPostsByUserId($user_id, $limit, $offset) ?: [];
+    }
+
+    public function validateLikePost(int $issuer, int $post_id): ?array
+    {
+        $like = $this->postModel->getLike($issuer, $post_id);
+        
+        if($like){
+            $this->postModel->deleteLike($issuer, $post_id);
+        }
+        else{
+            $this->postModel->insertLike($issuer, $post_id);
+        }
+
+        return $like;
     }
 
     public function validateNewPost( int $author_id, string $title, ?string $description, string $category, ?array $file  ): void
     {
         $title = trim($title);
         $description = $description ? trim($description) : null;
-        $category = strtolower(trim($category));
+        $category = trim($category);
 
         if($title === "")
             throw new HttpException(400, "Title cannot be empty.");
 
-        if(strlen($title) < 3 || strlen($title) > 192)
-            throw new HttpException(400, "Title must be 3-192 in character length.");
+        if(strlen($title) < NEWPOST_MIN_TITLE_LENGTH || strlen($title) > NEWPOST_MAX_TITLE_LENGTH)
+            throw new HttpException(400, "Title must be " . NEWPOST_MIN_TITLE_LENGTH . "-" . NEWPOST_MAX_TITLE_LENGTH . " characters.");
 
-        if($description && strlen($description) > 16384)
-            throw new HttpException(400, "Description cannot exceed 16384 characters.");
+        if($description && strlen($description) > NEWPOST_MAX_DESC_LENGTH)
+            throw new HttpException(400, "Description cannot exceed " . NEWPOST_MAX_DESC_LENGTH . "  characters.");
 
         $newFilename = null;
         $fileExt     = null;
@@ -67,22 +100,27 @@ class PostService{
 
 
             if($fileError !== UPLOAD_ERR_OK)
-                throw new HttpException(400, "An error ocurred while uploading file.");
+                throw new HttpException(400, "An error ocurred while uploading file. ($fileError)");
 
             if(
-               !isImage($fileExt) && !isVideo($fileExt) ||
+               NEWPOST_ENABLE_STRICT_MIME_CHECKING &&
+               (!isImage($fileExt) && !isVideo($fileExt) ||
                isImage($fileExt) && !isImageMime($fileMime) ||
-               isVideo($fileExt) && !isVideoMime($fileMime)
+               isVideo($fileExt) && !isVideoMime($fileMime))
             ){
                 throw new HttpException(400, "Only image and video are allowed for uploads.");
             }
 
-            if($fileSize > 20 * 1048576)
-                throw new HttpException(413, "File too large, max file size is 20MB.");
+            if(!isImage($fileExt) && !isVideo($fileExt)){
+                throw new HttpException(400, "Only image and video are allowed for uploads.");
+            }
+
+            if($fileSize > NEWPOST_MAX_FILE_SIZE)
+                throw new HttpException(413, "File too large, max file size is " . NEWPOST_MAX_FILE_SIZE / 1048576 . " MB");
 
 
             $newFilename = sprintf(
-                "media_%s_%s_%s.",
+                "media_%s_%s_%s",
                 (string) $author_id,
                 date("Ymd-His"),
                 bin2hex(random_bytes(8))
@@ -97,7 +135,7 @@ class PostService{
                 mkdir($target_destination, 0777, true);
 
 
-            if(!empty($file["name"]) && isImageMime($fileMime)){
+            if(isImage($fileExt)){
 
                 $gd_file = getimagesize($fileTmp);
 
@@ -124,15 +162,17 @@ class PostService{
                 imagealphablending($img, false);
                 imagesavealpha($img, true);
 
-                if(!imagewebp($img, $server_destination . ".webp", 76))
+                $fileExt = "webp";
+
+                if(!imagewebp($img, $server_destination . "." . $fileExt, NEWPOST_IMAGE_WEBP_COMPRESS_QUALITY))
                     throw new HttpException(500, "Unable to save uploaded image.");
 
                 imagedestroy($img);
                 
             }
-            elseif(isVideoMime($fileMime)){
+            elseif(isVideo($fileExt)){
 
-                if(!move_uploaded_file($fileTmp, $server_destination . $fileExt))
+                if(!move_uploaded_file($fileTmp, $server_destination . "." . $fileExt))
                     throw new HttpException(500, "Failed to move uploaded file.");
             }
 
@@ -143,11 +183,11 @@ class PostService{
             $category, 
             $title, 
             $description, 
-            $newFilename, 
+            $newFilename === null && $fileExt === null ? null : $newFilename . "." . $fileExt, 
             $fileExt, 
-            $browser_destination
+            $browser_destination === null && $fileExt === null ? null : $browser_destination . "." . $fileExt
         );
-    }
+    }   
 
     public function validateEditPost( int $issuer_id, 
                                       int $post_id,
@@ -173,24 +213,26 @@ class PostService{
         );
     }
 
-    public function validateDeletePost( int $issuer_id, int $post_id ): void
+    public function validateDeletePost( array $issuer, int $post_id ): void
     {
-        $post = $this->postModel->getPostById($post_id);
+        $post = $this->postModel->getPostById($post_id, false);
 
         if(!$post)
             throw new HttpException(404, "Post not found.");
 
-        if($post["author_id"] !== $issuer_id)
+        if($post["author_id"] !== $issuer["id"] && $issuer["role"] !== ROLE_ADMIN)
+        {
             throw new HttpException(403, "Forbidden operation.");
+        }
 
         $file_url = APP_ROOT() . "/" . $post["file_url"];
 
-        if(!empty($file_url) && file_exists($file_url)){ 
+        if(!empty($post["file_url"]) && !empty($post["file_ext"]) && file_exists($file_url)){ 
             
             unlink($file_url);
         }
 
-        $this->postModel->deletePost($issuer_id, $post_id);
+        $this->postModel->deletePost($post_id);
     }
 
 

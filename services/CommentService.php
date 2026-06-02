@@ -26,27 +26,29 @@ class CommentService{
         if($comment === "")
             throw new HttpException(400, "Comment is required.");
 
-        if(strlen($comment) > 16384)
-            throw new HttpException(400, "Comment must be under 16384 characters");
+        if(strlen($comment) > CMT_MAX_LENGTH)
+            throw new HttpException(400, "Comment must be under " . CMT_MAX_LENGTH . " characters");
 
         $this->postService->getPost($post_id);
 
         $this->commentModel->insertComment($issuer_id, $post_id, $comment);
     }
 
-    public function validateDeleteComment(int $issuer_id, int $comment_id): void
+    public function validateDeleteComment(array $issuer, int $comment_id): void
     {
-        if(!$issuer_id || !$comment_id)
+        if(!$issuer["id"] || !$comment_id)
             throw new HttpException(400, "Unspecified issuer or post id.");
 
         $cmt = $this->commentModel->getComment($comment_id);
 
-        if(!$cmt)
+        if(!$cmt) {
             throw new HttpException(404, "Comment not found.");
+        }
 
-        if($cmt["author_id"] !== $issuer_id)
+        if($cmt["author_id"] !== $issuer["id"] && $issuer["role"] !== ROLE_ADMIN) {
             throw new HttpException(403,"Forbidden operation.");
+        }
 
-        $this->commentModel->deleteComment($issuer_id, $comment_id);
+        $this->commentModel->deleteComment($comment_id);
     }
 }

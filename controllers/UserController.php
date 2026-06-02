@@ -20,6 +20,37 @@ class UserController{
         }
     }
 
+    public function getAllUsers(): void
+    {
+        try{
+            respond(200, $this->userService->getAllUsers());
+        }
+        catch(HttpException $e){
+            respond($e->getStatusCode(), $e->getMessage());
+        }
+    }
+
+    public function getCategories(): void
+    {
+        try{
+            $issuer = $this->authService->getUserInfo();
+
+            $categories = categories();
+
+            if($issuer["role"] === "admin"){
+                $categories = [
+                    ...categories(),
+                    "Changelog" => "Changelog"
+                ];
+            }
+
+            respond(200, $categories);
+        }
+        catch(HttpException $e){
+            respond($e->getStatusCode(), $e->getMessage());
+        }
+    }
+
     public function newAvatar(): void
     {
         try{
@@ -44,8 +75,10 @@ class UserController{
         try{
             $issuer = $this->authService->getUserInfo();
 
+            $body = getBody();
+
             $this->userService->validateBio(
-                $issuer["id"], POST("bio")
+                $issuer["id"], $body["bio"]
             );
 
             respond(200,"Bio changed successfully.");

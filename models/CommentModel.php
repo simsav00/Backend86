@@ -43,9 +43,9 @@ class CommentModel{
         $stmt->execute([ $post_id, $issuer_id, $comment ]);
     }
 
-    public function deleteComment(int $issuer_id, int $comment_id): void
+    public function deleteComment(int $comment_id): void
     {
-        $stmt = $this->conn->prepare("DELETE FROM posts_comments WHERE id = ? AND author_id = ?");
-        $stmt->execute([ $comment_id, $issuer_id]);
+        $stmt = $this->conn->prepare("DELETE FROM posts_comments WHERE id = ?");
+        $stmt->execute([ $comment_id,]);
     }
 }

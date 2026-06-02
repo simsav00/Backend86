@@ -7,6 +7,16 @@ class UserModel{
         private PDO $conn
     ){}
 
+    public function getAllUsers(): ?array
+    {
+        $stmt = $this->conn->prepare("SELECT id, username, role, bio, avatar, reg_date FROM users");
+        $stmt->execute();
+
+        $users = $stmt->fetchAll();
+
+        return $users ? attachBaseUrl($users) : null;
+    }
+
     public function getUserById( int $user_id ): ?array
     {
         $stmt = $this->conn->prepare("SELECT id, username, role, bio, avatar, reg_date FROM users WHERE id = ?");

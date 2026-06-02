@@ -1,13 +1,17 @@
 <?php
 declare(strict_types=1);
 
-header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-header("Cache-Control: post-check=0, pre-check=0", false);
-header("Pragma: no-cache");
-header("Expires: 0");
+require_once "libraries/envLoader.php";
+loadEnv("secrets/.env");
 
 require_once "config/functions.php";
-require_once "libraries/envLoader.php";
+require_once "config/settings.php";
+
+ini_set("display_errors", SHOW_PHP_ERRORS ? 1 : 0);
+ini_set("display_startup_errors",SHOW_PHP_ERRORS ? 1 : 0);
+error_reporting(SHOW_PHP_ERRORS ? E_ALL : 0);
+
+require_once "config/headers.php";
 
 require_once HTTP_EXCEPTION;
 require_once DB_CONN;
@@ -27,7 +31,6 @@ require_once COMMENT_CONTROLLER;
 require_once POST_CONTROLLER;
 require_once USER_CONTROLLER;
 
-loadEnv(".env");
 
 $db = new Database($_ENV["DB_HOST"], $_ENV["DB_NAME"], $_ENV["DB_USER"], $_ENV["DB_PASS"]);
 $conn = $db->connect();
@@ -47,3 +50,6 @@ $commentController = new CommentController($commentService, $authService);
 $userModel = new UserModel($conn);
 $userService = new UserService($userModel);
 $userController = new UserController($userService, $authService);
+
+# automatically execute router
+require_once "config/router.php";

@@ -20,6 +20,7 @@ class PostModel{
 
         $stmt = $this->conn->prepare("SELECT p.*, 
                                              COALESCE(c.total_comments, 0) total_comments,
+                                             COALESCE(l.total_likes,0) total_likes,
                                              u.username, 
                                              u.avatar
                                       FROM posts p
@@ -28,6 +29,11 @@ class PostModel{
                                         FROM posts_comments
                                         GROUP BY post_id
                                       ) c ON c.post_id = p.id
+                                      LEFT JOIN(
+                                        SELECT post_id, COUNT(*) total_likes
+                                        FROM posts_likes
+                                        GROUP BY post_id
+                                      ) l on l.post_id = p.id
                                       JOIN users u ON p.author_id = u.id
                                       ORDER BY p.post_date DESC, p.id DESC
                                       LIMIT ? OFFSET ?");
@@ -45,6 +51,7 @@ class PostModel{
     {
         $stmt = $this->conn->prepare("SELECT p.*,
                                              COALESCE(c.total_comments, 0) total_comments,
+                                             COALESCE(l.total_likes, 0) total_likes,
                                              u.username,
                                              u.avatar
                                       FROM posts p
@@ -53,6 +60,11 @@ class PostModel{
                                         FROM posts_comments
                                         GROUP BY post_id
                                       ) c ON c.post_id = p.id
+                                      LEFT JOIN(
+                                        SELECT post_id, COUNT(*) total_likes
+                                        FROM posts_likes
+                                        GROUP BY post_id
+                                      ) l on l.post_id = p.id
                                       INNER JOIN users u ON p.author_id = u.id
                                       WHERE p.category = ?
                                       ORDER BY p.post_date DESC, p.id DESC
@@ -68,23 +80,83 @@ class PostModel{
         return $posts ? attachBaseUrl($posts) : null;
     }
 
-    public function getPostById(int $postId): ?array
+    public function getPostById(int $postId, bool $include_url = true): ?array
     {
         
-        $stmt = $this->conn->prepare("SELECT p.*, u.username, u.avatar, COALESCE(c.total_comments, 0) total_comments
+        $stmt = $this->conn->prepare("SELECT p.*, u.username, u.avatar, COALESCE(c.total_comments, 0) total_comments, COALESCE(l.total_likes, 0) total_likes
                                       FROM posts p
                                       LEFT JOIN(
                                         SELECT post_id, COUNT(*) total_comments
                                         FROM posts_comments
                                         GROUP BY post_id
                                       ) c ON c.post_id = p.id
+                                      LEFT JOIN(
+                                        SELECT post_id, COUNT(*) total_likes
+                                        FROM posts_likes
+                                        GROUP BY post_id
+                                      ) l on l.post_id = p.id
                                       INNER JOIN users u ON p.author_id = u.id
                                       WHERE p.id = ?");
         $stmt->execute([ $postId ]);                        
         
-        $post = $stmt->fetch();
+        $post = $stmt->fetch() ?: null;
 
-        return $post ? attachBaseUrl($post): null;
+        return $post && $include_url ? attachBaseUrl($post) : $post;
+    }
+
+        public function getPostsByUserId(int $user_id, int $limit, int $offset): ?array
+    {
+        $stmt = $this->conn->prepare("SELECT p.*,
+                                             COALESCE(c.total_comments, 0) total_comments,
+                                             COALESCE(l.total_likes, 0) total_likes,
+                                             u.username,
+                                             u.avatar
+                                      FROM posts p
+                                      LEFT JOIN (
+                                        SELECT post_id, COUNT(*) total_comments
+                                        FROM posts_comments
+                                        GROUP BY post_id
+                                      ) c ON c.post_id = p.id
+                                      LEFT JOIN(
+                                        SELECT post_id, COUNT(*) total_likes
+                                        FROM posts_likes
+                                        GROUP BY post_id
+                                      ) l on l.post_id = p.id
+                                      INNER JOIN users u ON p.author_id = u.id
+                                      WHERE p.author_id = ?
+                                      ORDER BY p.post_date DESC, p.id DESC
+                                      LIMIT ? OFFSET ?");
+
+        $stmt->bindValue(1, (int) $user_id);
+        $stmt->bindValue(2, (int) $limit, PDO::PARAM_INT);
+        $stmt->bindValue(3, (int) $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        
+        $posts = $stmt->fetchAll();
+        
+        return $posts ? attachBaseUrl($posts) : null;
+    }
+
+    public function deleteLike(int $author_id, int $post_id): void
+    {
+        $stmt = $this->conn->prepare("DELETE FROM posts_likes WHERE post_id = ? AND author_id = ?");
+        $stmt->execute([ $post_id, $author_id ]);
+    }
+
+    public function insertLike(int $author_id, int $post_id): void
+    {
+        $stmt = $this->conn->prepare("INSERT INTO posts_likes (post_id, author_id) VALUES (?, ?)");
+        $stmt->execute([ $post_id, $author_id ]);
+    }
+
+    public function getLike(int $author_id, int $post_id): ?array
+    {
+        $stmt = $this->conn->prepare("SELECT * FROM posts_likes WHERE post_id = ? and author_id = ?");
+        $stmt->execute([ $post_id, $author_id ]);
+        
+        $like = $stmt->fetch();
+
+        return $like ?: null;
     }
 
     public function updatePost(int $author_id,
@@ -97,10 +169,10 @@ class PostModel{
         $stmt->execute([ $category, $title, $description, $post_id, $author_id ]);
     }
 
-    public function deletePost(int $author_id, int $post_id): void
+    public function deletePost(int $post_id): void
     {
-        $stmt = $this->conn->prepare("DELETE FROM posts WHERE id = ? AND author_id = ?");
-        $stmt->execute([ $post_id, $author_id ]);
+        $stmt = $this->conn->prepare("DELETE FROM posts WHERE id = ?");
+        $stmt->execute([ $post_id ]);
     }
 
     public function insertPost(int $author_id, 

@@ -17,7 +17,7 @@ class AuthModel{
 
     public function getUserInfoBySessionToken( ?string $hashedToken ): ?array
     {
-        $stmt = $this->conn->prepare("SELECT u.id, u.username, u.bio, u.avatar, u.role
+        $stmt = $this->conn->prepare("SELECT u.id, u.username, u.bio, u.avatar, u.role, u.reg_date
                                       FROM `sessions` s 
                                       JOIN users u ON s.user_id = u.id 
                                       WHERE s.token = ? AND expires > UNIX_TIMESTAMP() 
@@ -27,6 +27,12 @@ class AuthModel{
         $user = $stmt->fetch();
         
         return $user ? attachBaseUrl($user) : null;
+    }
+
+    public function updatePassword(int $user_id, string $new_password): void
+    {
+        $stmt = $this->conn->prepare("UPDATE users SET `password` = ? WHERE id = ?");
+        $stmt->execute([ $new_password, $user_id ]);
     }
 
     public function insertUserSession(int $user_id, string $token, int $expires): void
@@ -49,7 +55,17 @@ class AuthModel{
         $stmt->execute([ $hashedToken ]);
     }
 
-    public function getUser(string $username): ?array
+    public function getUserById(int $user_id): ?array
+    {
+
+        $stmt = $this->conn->prepare("SELECT * FROM users WHERE id = ? LIMIT 1");
+        $stmt->execute([ $user_id ]);
+
+        $user = $stmt->fetch();
+
+        return $user ? attachBaseUrl($user) : null;
+    }
+    public function getUserByUsername(string $username): ?array
     {
 
         $stmt = $this->conn->prepare("SELECT * FROM users WHERE username = ? LIMIT 1");

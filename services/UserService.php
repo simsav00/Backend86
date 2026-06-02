@@ -9,6 +9,11 @@ class UserService{
         private UserModel $userModel
     ){}
 
+    public function getAllUsers(): ?array
+    {
+        return $this->userModel->getAllUsers();
+    }
+
     public function validateGetUser(int $user_id): ?array
     {
         return $this->userModel->getUserById($user_id);
@@ -27,23 +32,26 @@ class UserService{
         $avatarTmp  = $avatar["tmp_name"];
         $avatarExt  = strtolower(pathinfo($avatarName, PATHINFO_EXTENSION));
         $avatarError = $avatar["error"];
+        $new_filename = "avatar_" . (string) $user_id . ".webp";
+        $browser_destination = USER_AVATAR_URL_BASE() . "/" . $new_filename;
+        $server_destination = USER_AVATAR_DIR() . "/" . $new_filename;
 
         $gd_info = getimagesize($avatarTmp);
 
         if($avatarError !== UPLOAD_ERR_OK)
-            throw new HttpException(400, "Failed to upload avatar.");
+            throw new HttpException(400, "Failed to upload avatar. ($avatarError)");
 
-        if($avatarSize > 6 * 1048576)
-            throw new HttpException(413, "File too large, maximum file size is 6MB.");
+        if($avatarSize > AVATAR_IMAGE_MAX_FILE_SIZE)
+            throw new HttpException(413, "File too large, maximum file size is " . AVATAR_IMAGE_MAX_FILE_SIZE / 1048576 . "MB");
 
         if(!$gd_info)
             throw new HttpException(400, "Invalid image file.");
 
-        if(!isImage($avatarExt) || !isImageMime($gd_info["mime"]))
+        if(!isImage($avatarExt))
             throw new HttpException(400, "Only image files are allowed for upload.");
 
-        if($gd_info[0] > 5000 || $gd_info[1] > 5000)
-            throw new HttpException(400, "Image resolution too large, maximum is 4999x4999.");
+        if($gd_info[0] > AVATAR_IMAGE_MAX_WIDTH || $gd_info[1] > AVATAR_IMAGE_MAX_HEIGHT)
+            throw new HttpException(400, "Image resolution too large, maximum is " . AVATAR_IMAGE_MAX_WIDTH . "x" . AVATAR_IMAGE_MAX_HEIGHT . ".");
 
         $img = null;
 
@@ -70,14 +78,16 @@ class UserService{
         
         if(!imagewebp(
             $img, 
-            USER_AVATAR_DIR() . "/avatar_" . (string) $user_id . ".webp",
-            75
+            $server_destination,
+            AVATAR_IMAGE_WEBP_COMPRESS_QUALITY
         ))
         {
             throw new HttpException(500, "Internal Server Error: Unable to save image.");
         }
 
         imagedestroy($img);
+
+        $this->userModel->updateAvatarUrl($user_id, $browser_destination . "?=" . time());
     }
 
     public function validateBio( int $user_id, ?string $bio ): void
@@ -85,8 +95,8 @@ class UserService{
         if(!$user_id)
             throw new HttpException(400, "Unspecified user id.");
 
-        if(strlen($bio) > 2048)
-            throw new HttpException(400, "Bio cannot exceed 2048 characters.");
+        if(strlen($bio) > BIO_MAX_LENGTH)
+            throw new HttpException(400, "Bio cannot exceed ". BIO_MAX_LENGTH . " characters.");
 
         if($bio === "" || $bio === null) $bio = null;
 

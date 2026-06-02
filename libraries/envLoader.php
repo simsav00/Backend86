@@ -32,8 +32,10 @@ function loadEnv(string $path): void
             $value = substr($value, 1, -1);
         }
 
-        putenv("$key=$value");
+        if (preg_match('/^[^,]+(?:,[^,]+)+$/', $value)) {
+            $value = array_map('trim', explode(',', $value));
+        }
+        
         $_ENV[$key] = $value;
-        $_SERVER[$key] = $value;
     }
 }

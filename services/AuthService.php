@@ -16,14 +16,23 @@ class AuthService{
         if(!$username || !$password)
             throw new HttpException(400, "Username or password cannot be empty.");
 
-        $duplicates = $this->authModel->getUser($username);
+        if(strlen($username) < REGISTER_USERNAME_MIN_CHARS || strlen($username) > REGISTER_USERNAME_MAX_CHARS) {
+            throw new HttpException(400, "Username must be " . REGISTER_USERNAME_MIN_CHARS . "-" . REGISTER_USERNAME_MAX_CHARS . " characters.");
+        }
 
-        if($duplicates)
+        if(strlen($password) < REGISTER_PASSWORD_MIN_CHARS || strlen($password) > REGISTER_PASSWORD_MAX_CHARS) {
+            throw new HttpException(400, "Password must be " . REGISTER_PASSWORD_MIN_CHARS . "-" . REGISTER_PASSWORD_MAX_CHARS . " characters.");
+        }
+
+        $duplicates = $this->authModel->getUserByUsername($username);
+
+        if($duplicates) {
             throw new HttpException(409, "User with the name already exists.");
+        }
 
         $hashPwd = password_hash($password, PASSWORD_DEFAULT);
 
-        $this->authModel->insertUser($username, $hashPwd);
+        $this->authModel->insertUser($username, $hashPwd, REGISTER_DEFAULT_AVATAR);
     }
 
     public function validateLogin(string $username, string $password): void
@@ -34,7 +43,7 @@ class AuthService{
         if(!$username || !$password)
             throw new HttpException(400, "Username or password cannot be empty.");
 
-        $user = $this->authModel->getUser($username);
+        $user = $this->authModel->getUserByUsername($username);
 
         if(!$user || !password_verify($password, $user["password"]))
             throw new HttpException(401, "Invalid credentials.");
@@ -44,14 +53,46 @@ class AuthService{
         $this->authModel->insertUserSession($user["id"], $session["hashedToken"], $session["expires"]);
     }
 
-    function isAdmin(): bool
+    public function validateAlterPassword(int $user_id, string $oldPassword, string $newPassword) : void
+    {
+        if(!$newPassword || !$oldPassword){
+            throw new HttpException(400, "New password and old password are required.");
+        }
+        
+        $oldPassword = trim($oldPassword);
+        $newPassword = trim($newPassword);
+
+        $user = $this->authModel->getUserById($user_id);
+
+        if(!$user) {
+            throw new HttpException(400, "User not found.");
+        }
+
+        if(strlen($newPassword) < REGISTER_PASSWORD_MIN_CHARS || strlen($newPassword) > REGISTER_PASSWORD_MAX_CHARS) {
+            throw new HttpException(400, "Password must be " . REGISTER_PASSWORD_MIN_CHARS . "-" . REGISTER_PASSWORD_MAX_CHARS . " characters.");
+        }
+
+        if(!password_verify($oldPassword, $user["password"])) {
+            throw new HttpException(400, "Old password does not match.");
+        }
+
+        $hashPwd = password_hash($newPassword, PASSWORD_DEFAULT);
+
+        $this->authModel->updatePassword($user_id, $hashPwd);
+
+        $session = $this->getSessionFromCookie();
+
+        self::rotateSessionCookie($session["token"]);
+    }
+
+    public function isAdmin(): bool
     {
         $user = $this->getUserInfo();
 
-        return (bool) $user["role"] === "admin";
+        return $user["role"] === "admin";
     }
 
-    function dropSession(): void
+    public function dropSession(): void
     {   
         $session = $this->getSessionFromCookie();
         
@@ -69,7 +110,7 @@ class AuthService{
         return $user ?: null;
     }
 
-    public function getSessionFromCookie(): ?array
+    public function getSessionFromCookie(bool $rehash_if_expired = true): ?array
     {
         if(!isset($_COOKIE["session"]))
             throw new HttpException(401, "User is not logged in.");
@@ -82,7 +123,7 @@ class AuthService{
         if(!$session || $session["expires"] < time())
             throw new HttpException(401, "Invalid or expired session.");
 
-        if($session["expires"] - time() < (86400 * 2)) {
+        if($rehash_if_expired && $session["expires"] - time() < (SESSION_EXPIRY_BEFORE_ROTATION)) {
             
             $newSession = self::newSessionCookie();
 
@@ -114,7 +155,7 @@ class AuthService{
     {
         $rawToken = bin2hex(random_bytes(64));
         $hashedToken = hash("sha256", $rawToken);
-        $expires = time() + (86400 * 14);
+        $expires = time() + (SESSION_CREATION_EXPIRY);
 
         self::setSessionCookie($rawToken, $expires);
 

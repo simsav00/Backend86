@@ -6,8 +6,25 @@ class AuthController{
 
     public function __construct(
         private AuthService $authService
-    )
-    {}
+    ){}
+
+    public function alterPassword(): void
+    {
+        try{
+            $issuer = $this->authService->getUserInfo();
+
+            $this->authService->validateAlterPassword(
+                $issuer["id"],
+                POST("old_password"),
+                POST("new_password")
+            );
+
+            respond(200, "Password changed successfully.");
+        }
+        catch(HttpException $e){
+            respond($e->getStatusCode(), $e->getMessage());
+        }
+    }
 
     public function me(): void
     {

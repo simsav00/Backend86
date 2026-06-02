@@ -35,7 +35,9 @@ define("COMMENT_SERVICE",      "services/CommentService.php");
 define("POST_SERVICE",         "services/PostService.php");
 define("USER_SERVICE",         "services/UserService.php");
 
-
+define("ROLE_MEMBER", "member");
+define("ROLE_ADMIN", "admin");
+define("ROLE_OWNER", "owner");
 
 define("HTTP_EXCEPTION",      "exceptions/HttpException.php");
 
@@ -51,7 +53,6 @@ function USER_AVATAR_URL_BASE(): string
 function USER_AVATAR_DIR(): string
 {
     return APP_ROOT() . USER_AVATAR_URL_BASE();
-    # return USER_AVATAR_URL_BASE() . "/avatar_" . $id . ".webp";
 }
 
 function USER_POST_ATTACHMENT_DIR(int $id): string
@@ -94,29 +95,21 @@ function respond(int $status, mixed $data): void
     }
 
     http_response_code($status);
-
-    if($status > 399){
-
-        exit(json_encode([
-            "status" => $status,
-            "message"=> $data
-        ], 128));
-    }
-    else{
-
-        exit(json_encode([
-            "status" => $status,
-            "data"   => $data
-        ], 128));
-    }
+    exit(json_encode([
+            "status"    => $status,
+            ($status > 399 ? "message" : "data")   => $data
+        ], RESPOND_JSON_PRETTY_PRINTING ? 128 : 0
+    ));
 }
 
+
+function getBody():mixed
+{
+    return json_decode(file_get_contents("php://input"),true);
+}
 
 function getSessionCookie(): ?string{
     return $_COOKIE["session"];
-}
-
-function isAdmin(): void{
 }
 
 function APP_ROOT(): string{
@@ -163,10 +156,6 @@ function isLoggedIn(): bool{
     return isset($_SESSION["logged_in"]) && $_SESSION["logged_in"] === true;
 }
 
-function requireLogin(): void{
-    
-}
-
 function attachBaseUrl(array $variable): ?array
 {
     $isSingle = isset($variable["file_url"]) || isset($variable["avatar"]);
@@ -177,7 +166,7 @@ function attachBaseUrl(array $variable): ?array
 
     foreach ($variable as &$var) {
         if (isset($var["file_url"]) && !empty($var["file_url"])) {
-            $var["file_url"] = CURRENT_URL . $var["file_url"];
+            $var["file_url"] = CURRENT_URL . $var["file_url"] ;
         }
 
         if (isset($var["avatar"]) && !empty($var["avatar"])) {
@@ -192,7 +181,7 @@ function attachBaseUrl(array $variable): ?array
 function isImage(string $filetype): bool
 {
     return in_array($filetype, [
-        "jpg",  "webp", "png", "apng",  "gif",  "webp", "avif",
+        "jpg",  "jpeg", "webp", "png", "apng",  "gif",  "webp", "avif",
         "heic", "heif", 
         "tif",  "tiff", "bmp",  "ico",  "jxl",
 
